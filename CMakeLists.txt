@@ -6,6 +6,12 @@ project(vswitch)
 
 add_executable("${PROJECT_NAME}" vswitch.cpp)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+
 find_package(PcapPlusPlus REQUIRED)
 
 # We want to have the binary compiled in the same folder as the code
