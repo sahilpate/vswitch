@@ -8,15 +8,30 @@
 #include <PcapLiveDeviceList.h>
 #include <SystemUtils.h>
 
+class PQueueEntry {
+public:
+    PQueueEntry() {}
+
+    PQueueEntry(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_intf)
+	: pckt(pckt),
+	  src_intf(src_intf)
+	{}
+
+    pcpp::RawPacket pckt;
+    pcpp::PcapLiveDevice *src_intf;
+    std::vector<pcpp::PcapLiveDevice *> dst_intfs;
+};
+
 /*
- * PacketQueue - A generic, thread-safe, FIFO queue implemented using a fixed size circular buffer.
+ * PacketQueue - A thread-safe, FIFO queue implemented using a fixed size circular buffer.
  * It follows the "best effort" model; if the queue is full when attemping to push a new element,
  * that element is immediately dropped (rather than waiting for space to be made).
  */
-template <typename T>
 class PacketQueue {
 public:
-    bool push_packet(T obj) {
+    bool push_packet(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_intf) {
+	PQueueEntry obj(pckt, src_intf);
+
 	prod_mtx.lock();
 
 	if(space == 0) {
@@ -37,13 +52,13 @@ public:
 	return true;
     }
 
-    T pop_packet() {
+    PQueueEntry pop_packet() {
 	std::unique_lock<std::mutex> local_mtx(cons_mtx);
 	while(objects == 0) {
 	    cons_cond.wait(local_mtx);
 	}
 
-	T popped_val = packet_queue[out];
+	PQueueEntry popped_val = packet_queue[out];
 	out = (out + 1) % queue_size;
 	objects--;
 	local_mtx.~unique_lock<std::mutex>();
@@ -57,7 +72,7 @@ public:
 
 
     const static int queue_size = 10;
-    T packet_queue[queue_size];
+    PQueueEntry packet_queue[queue_size];
 
 private:
     int in = 0, out = 0, space = queue_size, objects = 0;
@@ -147,7 +162,7 @@ public:
 
     std::vector<pcpp::PcapLiveDevice *> veth_intfs;
     std::vector<int> ingress_count;
-    PacketQueue<std::pair<pcpp::RawPacket, pcpp::PcapLiveDevice *>> packet_queue;
+    PacketQueue packet_queue;
     DuplicateManager dup_mgr;
 };
 
@@ -168,7 +183,7 @@ static void process_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
 	    }
 
 	    data->ingress_count[i]++;
-	    data->packet_queue.push_packet(std::pair(*packet, dev));
+	    data->packet_queue.push_packet(*packet, dev);
 	    break;
 	}
     }
@@ -182,17 +197,17 @@ static void process_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
  */
 void send_packets(VswitchShmem *data) {
     while(true) {
-	auto[pckt, src_intf_ptr] = data->packet_queue.pop_packet();
+	PQueueEntry entry = data->packet_queue.pop_packet();
 
 	for(long unsigned int i = 0; i < data->veth_intfs.size(); i++) {
 	    auto intf_ptr = data->veth_intfs[i];
 
-	    if(intf_ptr == src_intf_ptr) {
+	    if(intf_ptr == entry.src_intf) {
 		continue;
 	    }
 
-	    data->dup_mgr.mark_duplicate(i, pckt);
-	    intf_ptr->sendPacket(pckt);
+	    data->dup_mgr.mark_duplicate(i, entry.pckt);
+	    intf_ptr->sendPacket(entry.pckt);
 	}
     }
 }
