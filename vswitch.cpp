@@ -1,4 +1,5 @@
 #include <condition_variable>
+#include <ctime>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -7,6 +8,101 @@
 #include <PcapFileDevice.h>
 #include <PcapLiveDeviceList.h>
 #include <SystemUtils.h>
+
+/*
+ * RawPcktCompare - Overloads the () operator to, when given two pcpp::RawPacket's, provide a unique
+ * comparison between their actual values. It enables the pcpp::RawPacket type to be used with
+ * various standard containers or library functions which need a comparison function, typically for
+ * sorting.
+ */
+struct RawPcktCompare {
+    bool operator() (pcpp::RawPacket a, pcpp::RawPacket b) const {
+	for(int i = 0; i < a.getRawDataLen() && i < b.getRawDataLen(); i++) {
+	    if((a.getRawData())[i] == (b.getRawData())[i]) {
+		continue;
+	    } else {
+		return (a.getRawData())[i] < (b.getRawData())[i];
+	    }
+	}
+
+	return a.getRawDataLen() < b.getRawDataLen();
+    }
+};
+
+/*
+ * MacAddrCompare - Overloads the () operator to, when given two pcpp::MacAddress's, provide a
+ * unique comparison between their actual values. It enables the pcpp::MacAddress type to be used
+ * with various standard containers or library functions which need a comparison function, typically
+ * for sorting.
+ */
+struct MacAddrCompare {
+    bool operator() (pcpp::MacAddress a, pcpp::MacAddress b) const {
+	uint64_t a_full = 0, b_full = 0;
+
+	a.copyTo(reinterpret_cast<uint8_t *>(&a_full));
+	b.copyTo(reinterpret_cast<uint8_t *>(&b_full));
+
+	return a_full < b_full;
+    }
+};
+
+/*
+ * MacAddrTable - An abstraction for the table used to make forwarding decisions. This enables self
+ * learning, where mappings from a given MAC address to an interface are added as frames arrive,
+ * read from when deciding where to forward frames, and aged out over time.
+ */
+class MacAddrTable {
+public:
+    void push_mapping(pcpp::MacAddress mac_addr, pcpp::PcapLiveDevice *intf) {
+	table_access.lock();
+	table[mac_addr] = {intf, std::time(nullptr)};
+	table_access.unlock();
+    }
+
+    pcpp::PcapLiveDevice *get_mapping(pcpp::MacAddress mac_addr) {
+	table_access.lock();
+	auto table_it = table.find(mac_addr);
+	if(table_it == table.end()) {
+	    table_access.unlock();
+	    return nullptr;
+	}
+
+	pcpp::PcapLiveDevice *ret_intf = table_it->second.first;
+	table_access.unlock();
+	return ret_intf;
+    }
+
+    int age_mappings() {
+	int num_aged_out = 0;
+	auto table_it = table.begin();
+	std::time_t elem_time, cur_time = std::time(nullptr);
+	double diff;
+
+	table_access.lock();
+	while(table_it != table.end()) {
+	    elem_time = table_it->second.second;
+	    diff = difftime(cur_time, elem_time);
+
+	    if(diff > max_age) {
+		num_aged_out++;
+		table.erase(table_it++);
+	    } else {
+	        table_it++;
+	    }
+	}
+	table_access.unlock();
+
+	return num_aged_out;
+    }
+
+    static const int max_age = 5; // in seconds
+
+private:
+    std::map<pcpp::MacAddress,
+	     std::pair<pcpp::PcapLiveDevice *, std::time_t>,
+	     MacAddrCompare> table;
+    std::mutex table_access;
+};
 
 /*
  * PQueueEntry - Represents a queue entry in the PacketQueue class. The raw packet itself and the
@@ -94,7 +190,6 @@ public:
 	return popped_val;
     }
 
-
     const static int queue_size = 10;
     PQueueEntry packet_queue[queue_size];
 
@@ -105,26 +200,6 @@ private:
 
     std::condition_variable proc_cond, cons_cond;
     std::mutex prod_mtx, proc_mtx, cons_mtx;
-};
-
-/*
- * RawPcktCompare - Overloads the () operator to, when given two pcpp::RawPacket's, determine which
- * one has the smallest acutal value. It enables the pcpp::RawPacket type to be used with various
- * standard containers or library functions which need a comparison function, typically for sorting.
- */
-struct RawPcktCompare {
-    bool operator() (pcpp::RawPacket a, pcpp::RawPacket b) const {
-
-	for(int i = 0; i < a.getRawDataLen() && i < b.getRawDataLen(); i++) {
-	    if((a.getRawData())[i] == (b.getRawData())[i]) {
-		continue;
-	    } else {
-		return (a.getRawData())[i] < (b.getRawData())[i];
-	    }
-	}
-
-	return a.getRawDataLen() < b.getRawDataLen();
-    }
 };
 
 /*
@@ -191,6 +266,7 @@ public:
     std::vector<int> ingress_count;
     PacketQueue packet_queue;
     DuplicateManager dup_mgr;
+    MacAddrTable mac_tbl;
 };
 
 /*
