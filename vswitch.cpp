@@ -8,6 +8,11 @@
 #include <PcapLiveDeviceList.h>
 #include <SystemUtils.h>
 
+/*
+ * PQueueEntry - Represents a queue entry in the PacketQueue class. The raw packet itself and the
+ * interface it came in on are recorded when initially pushed onto the queue. Other information is
+ * filled in during processing, and that info is used when popping and egressing the packet.
+ */
 class PQueueEntry {
 public:
     PQueueEntry() {}
@@ -44,12 +49,31 @@ public:
 	space--;
 	prod_mtx.unlock();
 
+	proc_mtx.lock();
+	to_proc++;
+	proc_mtx.unlock();
+	proc_cond.notify_one();
+
+	return true;
+    }
+
+    void process_packet() {
+	std::unique_lock<std::mutex> local_mtx(proc_mtx);
+	while(to_proc == 0) {
+	    proc_cond.wait(local_mtx);
+	}
+
+	// Packet processing occurs here
+	proc = (proc + 1) % queue_size;
+	to_proc--;
+	local_mtx.~unique_lock<std::mutex>();
+
 	cons_mtx.lock();
 	objects++;
 	cons_mtx.unlock();
 	cons_cond.notify_one();
 
-	return true;
+	return;
     }
 
     PQueueEntry pop_packet() {
@@ -75,9 +99,12 @@ public:
     PQueueEntry packet_queue[queue_size];
 
 private:
-    int in = 0, out = 0, space = queue_size, objects = 0;
-    std::condition_variable cons_cond;
-    std::mutex prod_mtx, cons_mtx;
+    int in = 0, space = queue_size; // producer
+    int proc = 0, to_proc = 0;      // packet processor
+    int out = 0, objects = 0;       // consumer
+
+    std::condition_variable proc_cond, cons_cond;
+    std::mutex prod_mtx, proc_mtx, cons_mtx;
 };
 
 /*
@@ -167,12 +194,12 @@ public:
 };
 
 /*
- * process_packet() - Passed to pcpp::PcapLiveDevice.startCapture(), which is called for every
+ * receive_packet() - Passed to pcpp::PcapLiveDevice.startCapture(), which is called for every
  * vswitch interface. startCapture() creates a new thread which listens for traffic on the
  * corresponding interface, and this function is called whenever a new packet arrives. If the packet
  * is not a duplicate (see DuplicateManager), then it is queued to be sent.
  */
-static void process_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie) {
+static void receive_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie) {
     VswitchShmem *data = static_cast<VswitchShmem *>(cookie);
     pcpp::Packet parsedPacket(packet);
 
@@ -189,6 +216,17 @@ static void process_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
     }
 
     return;
+}
+
+/*
+ * process_packets() - A single thread is made with this function, which waits for packets to
+ * process on the packet queue. During processing, it fills in various metadata stored in the
+ * PQueueEntry class. Most notably, it makes the forwarding decision for each queued packet.
+ */
+void process_packets(VswitchShmem *data) {
+    while(true) {
+	data->packet_queue.process_packet();
+    }
 }
 
 /*
@@ -235,10 +273,12 @@ int main(void) {
 
     std::cout << "Starting capture on:" << std::endl;
     for(auto intf : veth_intfs) {
-	intf->startCapture(process_packet, &data);
+	intf->startCapture(receive_packet, &data);
 	std::cout << intf->getName() << std::endl;
     }
     std::cout << std::endl;
+
+    std::thread process(process_packets, &data);
     std::thread egress(send_packets, &data);
 
     pcpp::multiPlatformSleep(10);
