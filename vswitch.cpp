@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <EthLayer.h>
 #include <IPv4Layer.h>
 #include <Packet.h>
 #include <PcapFileDevice.h>
@@ -153,13 +154,38 @@ public:
 	return true;
     }
 
-    void process_packet() {
+    void process_packet(MacAddrTable *mac_tbl,
+			 std::vector<pcpp::PcapLiveDevice *> *veth_intfs) {
 	std::unique_lock<std::mutex> local_mtx(proc_mtx);
 	while(to_proc == 0) {
 	    proc_cond.wait(local_mtx);
 	}
 
-	// Packet processing occurs here
+	// Update MAC address table based on incoming packet
+	PQueueEntry &entry = packet_queue[proc];
+	pcpp::Packet parsed_pckt(&entry.pckt);
+	pcpp::EthLayer *eth_layer = parsed_pckt.getLayerOfType<pcpp::EthLayer>();
+	mac_tbl->push_mapping(eth_layer->getSourceMac(), entry.src_intf);
+
+	// Make forwarding decision based on MAC table
+	std::vector<pcpp::PcapLiveDevice *> out_intfs;
+	pcpp::PcapLiveDevice *mapping = mac_tbl->get_mapping(eth_layer->getDestMac());
+
+	if(mapping == nullptr) {
+	    // Broadcast if no mapping exists
+	    for(auto it : *veth_intfs) {
+		if(it != entry.src_intf) {
+		    out_intfs.push_back(it);
+		}
+	    }
+	} else if(mapping != entry.src_intf) {
+	    // Otherwise, if the packet is destined for a different intf from the src, forward to it
+	    out_intfs.push_back(mapping);
+	}
+
+	entry.dst_intfs = out_intfs;
+
+	// Increment buffer pointers
 	proc = (proc + 1) % queue_size;
 	to_proc--;
 	local_mtx.~unique_lock<std::mutex>();
@@ -301,7 +327,7 @@ static void receive_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
  */
 void process_packets(VswitchShmem *data) {
     while(true) {
-	data->packet_queue.process_packet();
+	data->packet_queue.process_packet(&(data->mac_tbl), &(data->veth_intfs));
     }
 }
 
@@ -310,17 +336,22 @@ void process_packets(VswitchShmem *data) {
  * in the VswitchShmem instance, and transmits the packet whenever it is available.
  */
 void send_packets(VswitchShmem *data) {
+    long unsigned int i, j;
     while(true) {
 	PQueueEntry entry = data->packet_queue.pop_packet();
 
-	for(long unsigned int i = 0; i < data->veth_intfs.size(); i++) {
-	    auto intf_ptr = data->veth_intfs[i];
+	for(i = 0; i < entry.dst_intfs.size(); i++) {
+	    auto intf_ptr = entry.dst_intfs[i];
 
-	    if(intf_ptr == entry.src_intf) {
-		continue;
+	    // TODO: Update the veth_intf vector to be a set instead, to avoid this redundant loop.
+	    // This requires changes across the entire program, mainly in DuplicateManager.
+	    for(j = 0; j < data->veth_intfs.size(); j++) {
+		if(data->veth_intfs[j] == entry.dst_intfs[i]) {
+		    break;
+		}
 	    }
 
-	    data->dup_mgr.mark_duplicate(i, entry.pckt);
+	    data->dup_mgr.mark_duplicate(j, entry.pckt);
 	    intf_ptr->sendPacket(entry.pckt);
 	}
     }
