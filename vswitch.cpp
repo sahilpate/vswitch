@@ -358,6 +358,17 @@ void send_packets(VswitchShmem *data) {
 }
 
 /*
+ * age_mac_addrs() - A single thread is made with this function, which removes old MAC to interface
+ * mappings at a regular interval, that interval being the default maximum age all entries have.
+ */
+void age_mac_addrs(VswitchShmem *data) {
+    while(true) {
+	pcpp::multiPlatformSleep(data->mac_tbl.max_age);
+	data->mac_tbl.age_mappings();
+    }
+}
+
+/*
  * main() - Initializes the capturing threads for the appropriate interfaces (those whose names are
  * prefixed by "vswitch") and the single sending thread.
  */
@@ -387,8 +398,9 @@ int main(void) {
 
     std::thread process(process_packets, &data);
     std::thread egress(send_packets, &data);
+    std::thread mac_tbl_ager(age_mac_addrs, &data);
 
-    pcpp::multiPlatformSleep(10);
+    pcpp::multiPlatformSleep(30);
     for(auto intf : veth_intfs) {
 	intf->stopCapture();
     }
