@@ -2,3 +2,4 @@
 testing/
 vswitch
 build/
+lex.yy.cc

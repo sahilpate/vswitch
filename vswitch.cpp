@@ -1,14 +1,20 @@
+// Standard Libraries
 #include <condition_variable>
 #include <ctime>
 #include <iostream>
 #include <map>
 #include <mutex>
+
+// PcapPlusPlus
 #include <EthLayer.h>
 #include <IPv4Layer.h>
 #include <Packet.h>
 #include <PcapFileDevice.h>
 #include <PcapLiveDeviceList.h>
 #include <SystemUtils.h>
+
+// Flex
+#include <FlexLexer.h>
 
 /*
  * RawPcktCompare - Overloads the () operator to, when given two pcpp::RawPacket's, provide a unique
@@ -296,6 +302,95 @@ public:
 };
 
 /*
+ * CliInterpreter - This class maintains a tree of valid serieses of CLI tokens and the functions
+ * that should be called when they are inputted. When given a series of tokens and their literal
+ * values through the interpret() function, the appropriate function will be called if the series
+ * is valid. Otherwise, it will return an error code.
+ */
+class CliInterpreter {
+public:
+    enum token {
+	ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT
+    };
+
+    CliInterpreter(VswitchShmem *shmem) : root(ROOT), shmem(shmem) {
+	for(auto cmd_func : commands) {
+	    auto [cmd, func] = cmd_func;
+	    this->add_cmd(root, cmd.begin(), cmd.end(), func);
+	}
+	return;
+    }
+
+    int interpret(std::vector<token> tokens, std::vector<std::string> args) {
+	long unsigned int i, j;
+	auto cur_node = &root;
+	for(i = 0; i < tokens.size(); i++) {
+	    bool found = false;
+	    for(j = 0; j < cur_node->children.size(); j++) {
+		if(tokens[i] == cur_node->children[j].tkn) {
+		    found = true;
+		    cur_node = &cur_node->children[j];
+		    break;
+		}
+	    }
+
+	    if(found == false) {
+		return -1;
+	    }
+	}
+
+	if(cur_node->func == nullptr) {
+	    return -1;
+	}
+
+	cur_node->func(args);
+	return 0;
+    }
+
+private:
+    class InterpreterTreeNode {
+    public:
+	InterpreterTreeNode(token tkn) : tkn(tkn) {}
+	InterpreterTreeNode(
+	    token tkn, std::function<void(std::vector<std::string>)> func)
+	    : tkn(tkn), func(func) {}
+
+	token tkn;
+	std::function<void(std::vector<std::string>)> func;
+	std::vector<InterpreterTreeNode> children;
+    };
+
+    InterpreterTreeNode root;
+    VswitchShmem *shmem;
+    const std::vector<std::pair<std::vector<token>,std::function<void(std::vector<std::string>)>>>
+    commands = {};
+
+    void add_cmd(InterpreterTreeNode &node,
+		 std::vector<token>::iterator cur,
+		 std::vector<token>::iterator end,
+		 std::function<void(std::vector<std::string>)> func) {
+	if(cur == end) {
+	    node.func = func;
+	    return;
+	}
+
+	long unsigned int nxt_tkn_indx;
+	for(nxt_tkn_indx = 0; nxt_tkn_indx < node.children.size(); nxt_tkn_indx++) {
+	    if(node.children[nxt_tkn_indx].tkn == *cur) {
+		break;
+	    }
+	}
+
+	if(nxt_tkn_indx == node.children.size()) {
+	    node.children.push_back(InterpreterTreeNode(*cur));
+	}
+
+	add_cmd(node.children[nxt_tkn_indx], ++cur, end, func);
+	return;
+    }
+};
+
+/*
  * receive_packet() - Passed to pcpp::PcapLiveDevice.startCapture(), which is called for every
  * vswitch interface. startCapture() creates a new thread which listens for traffic on the
  * corresponding interface, and this function is called whenever a new packet arrives. If the packet
@@ -366,6 +461,40 @@ void age_mac_addrs(VswitchShmem *data) {
 	pcpp::multiPlatformSleep(data->mac_tbl.max_age);
 	data->mac_tbl.age_mappings();
     }
+}
+
+/*
+ * cli() - A single thread is made with this function, which handles the vswitch command line
+ * interface. The function parses each line of user input through the help of a Flex file and passes
+ * the output to CliInterpreter::interpret() to interpret the text.
+ */
+void cli(VswitchShmem *data) {
+    CliInterpreter interpreter(data);
+    FlexLexer *lexer = new yyFlexLexer;
+    CliInterpreter::token token;
+
+    while(true) {
+	std::cout << "vswitch# ";
+	std::vector<CliInterpreter::token> tokens;
+	std::vector<std::string> args;
+	while((token = static_cast<CliInterpreter::token>(lexer->yylex())) != interpreter.NL) {
+	    tokens.push_back(token);
+	    if(token == interpreter.NAME || token == interpreter.UINT) {
+		args.push_back(std::string(lexer->YYText(), lexer->YYLeng()));
+	    }
+	}
+
+	if(tokens.size() == 0) {
+	    continue;
+	} else if(tokens.size() == 1 && tokens[0] == interpreter.EXIT) {
+	    break;
+	} else if(interpreter.interpret(tokens, args ) == -1) {
+	    std::cout << "Bad command" << std::endl;
+	}
+    }
+
+    delete lexer;
+    return;
 }
 
 /*
