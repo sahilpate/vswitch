@@ -18,10 +18,18 @@ set_source_files_properties(
   COMPILE_FLAGS "-Wall -Wextra"
 )
 
-set(LEXER_OUT "lex.yy.cc")
-flex_target(LEXER "cli_lexer.ll" "${LEXER_OUT}" COMPILE_FLAGS "-+")
+set(LEXER_OUT "build/lex.yy.cc")
+flex_target(LEXER "${CMAKE_CURRENT_SOURCE_DIR}/src/cli_lexer.ll" "${LEXER_OUT}" COMPILE_FLAGS "-+")
 
-add_executable("${PROJECT_NAME}" vswitch.cpp "${LEXER_OUT}")
+add_executable("${PROJECT_NAME}"
+  main.cpp
+  src/cli.cpp
+  src/duplicate_manager.cpp
+  src/mac_addr_table.cpp
+  src/packet_queue.cpp
+  "${LEXER_OUT}")
+
+target_include_directories("${PROJECT_NAME}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 # We want to have the binary compiled in the same folder as the code
 set_target_properties("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
