@@ -1,6 +1,7 @@
 // Standard Libraries
 #include <condition_variable>
 #include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -100,6 +101,36 @@ public:
 	table_access.unlock();
 
 	return num_aged_out;
+    }
+
+    void print_mactbl(std::ostream &out) {
+	this->age_mappings();
+	std::vector<std::string> headers = {"Mac Addresses", "Ports", "Time to Live"};
+
+	out << std::setw(30) << "" << "Mac Address Table" << std::endl;
+	out << std::string(80, '-') << std::endl << std::endl;
+
+	for(auto str : headers) {
+	    out << std::setw(20) << std::left << str;
+	}
+	out << std::endl;
+	for(auto str : headers) {
+	    out << std::setw(20) << std::left << std::string(str.size(), '-');
+	}
+	out << std::endl;
+
+	table_access.lock();
+	for(auto [mac_addr, info] : table) {
+	    auto [intf, timestamp] = info;
+	    double ttl = max_age - difftime(std::time(nullptr), timestamp);
+
+	    std::cout << std::setw(20) << std::left << mac_addr.toString();
+	    std::cout << std::setw(20) << std::left << intf->getName();
+	    std::cout << std::setw(20) << std::left << ttl << std::endl;
+	}
+	table_access.unlock();
+	std::cout << std::endl;
+	return;
     }
 
     static const int max_age = 5; // in seconds
@@ -362,8 +393,15 @@ private:
 
     InterpreterTreeNode root;
     VswitchShmem *shmem;
+
+    std::function<void(std::vector<std::string>)> show_mac_addrtbl = [&](std::vector<std::string>) {
+	shmem->mac_tbl.print_mactbl(std::cout);
+    };
+
     const std::vector<std::pair<std::vector<token>,std::function<void(std::vector<std::string>)>>>
-    commands = {};
+    commands = {
+	{{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl}
+    };
 
     void add_cmd(InterpreterTreeNode &node,
 		 std::vector<token>::iterator cur,
@@ -528,8 +566,10 @@ int main(void) {
     std::thread process(process_packets, &data);
     std::thread egress(send_packets, &data);
     std::thread mac_tbl_ager(age_mac_addrs, &data);
+    std::thread cmd_line(cli, &data);
 
-    pcpp::multiPlatformSleep(30);
+    cmd_line.join();
+
     for(auto intf : veth_intfs) {
 	intf->stopCapture();
     }
