@@ -1,3 +1,8 @@
+/*
+ * duplicate_manager.cpp - Implementation of the DuplicateManager class and a comparison operator
+ * for raw packets.
+ */
+
 #include <map>
 #include <mutex>
 #include <vector>

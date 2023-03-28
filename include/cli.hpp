@@ -1,3 +1,12 @@
+/*
+ * cli.hpp - Header file for CliInterpreter.
+ *
+ * This class maintains a tree of valid serieses of CLI tokens and the functions that should be
+ * called when they are inputted. When given a series of tokens and their literal values through the
+ * interpret() function, the appropriate function will be called if the series is valid. Otherwise,
+ * it will return an error code.
+ */
+
 #ifndef CLI_HPP
 #define CLI_HPP
 
@@ -6,12 +15,6 @@
 #include <vector>
 #include "vswitch_shmem.hpp"
 
-/*
- * CliInterpreter - This class maintains a tree of valid serieses of CLI tokens and the functions
- * that should be called when they are inputted. When given a series of tokens and their literal
- * values through the interpret() function, the appropriate function will be called if the series
- * is valid. Otherwise, it will return an error code.
- */
 class CliInterpreter {
 public:
     enum token {

@@ -1,3 +1,7 @@
+/*
+ * cli_lexer.ll - Flex file which scans for various special tokens used in the vswitch CLI.
+ */
+
 %option noyywrap
 
 %{

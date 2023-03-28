@@ -1,13 +1,20 @@
+/*
+ * packet_queue.hpp - Header file for PQueue and PQueueEntry.
+ *
+ * PacketQueue is a thread-safe, FIFO queue implemented using a fixed size circular buffer.
+ * It follows the "best effort" model; if the queue is full when attemping to push a new element,
+ * that element is immediately dropped (rather than waiting for space to be made).
+ *
+ * PQueueEntry represents a queue entry in the PacketQueue class. The raw packet itself and the
+ * interface it came in on are recorded when initially pushed onto the queue. Other information is
+ * filled in during processing, and that info is used when popping and egressing the packet.
+ */
+
 #ifndef PACKET_QUEUE_HPP
 #define PACKET_QUEUE_HPP
 
 #include <condition_variable>
 
-/*
- * PQueueEntry - Represents a queue entry in the PacketQueue class. The raw packet itself and the
- * interface it came in on are recorded when initially pushed onto the queue. Other information is
- * filled in during processing, and that info is used when popping and egressing the packet.
- */
 class PQueueEntry {
 public:
     PQueueEntry();
@@ -18,11 +25,6 @@ public:
     std::vector<pcpp::PcapLiveDevice *> dst_intfs;
 };
 
-/*
- * PacketQueue - A thread-safe, FIFO queue implemented using a fixed size circular buffer.
- * It follows the "best effort" model; if the queue is full when attemping to push a new element,
- * that element is immediately dropped (rather than waiting for space to be made).
- */
 class PacketQueue {
 public:
     bool push_packet(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_intf);

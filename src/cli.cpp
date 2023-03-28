@@ -1,3 +1,8 @@
+/*
+ * cli.cpp - Implementation of the CliInterpreter class, as well as its private
+ * InterpreterTreeNode class.
+ */
+
 #include <iostream>
 #include "cli.hpp"
 

@@ -1,3 +1,7 @@
+/*
+ * packet_queue.cpp - Implementation of the PacketQueue and PQueueEntry classes.
+ */
+
 #include <vector>
 #include <EthLayer.h>
 #include <RawPacket.h>

@@ -1,3 +1,10 @@
+/*
+ * vswitch_shmem.hpp - Header file for VswitchShemem.
+ *
+ * Stores various information about the current state of the virtual switch. Only one instance of
+ * this class should be created, and will be read and written to by most threads.
+ */
+
 #ifndef VSWITCH_SHMEM_HPP
 #define VSWITCH_SHMEM_HPP
 
@@ -5,10 +12,6 @@
 #include "packet_queue.hpp"
 #include "duplicate_manager.hpp"
 
-/*
- * VswitchShemem - Stores various information about the current state of the virtual switch. Only
- * one instance of this class should be created, and will be read and written to by most threads.
- */
 class VswitchShmem {
 public:
     VswitchShmem(std::vector<pcpp::PcapLiveDevice *> veth_intfs)

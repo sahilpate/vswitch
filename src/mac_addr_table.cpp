@@ -1,3 +1,8 @@
+/*
+ * mac_addr_table.cpp - Implementation for the MacAddrTable class as well as a comparator operator
+ * for raw MAC address values.
+ */
+
 #include <iomanip>
 #include <iostream>
 #include "mac_addr_table.hpp"
