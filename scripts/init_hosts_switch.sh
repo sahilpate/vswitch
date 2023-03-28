@@ -52,7 +52,7 @@ do
     mount -o bind /proc/${cont_pid}/ns/net /var/run/netns/${i}
 done
 
-# Create virtual ethernet interfaces to connect each hosts to the virtual
+# Create virtual ethernet interfaces to connect each host to the virtual
 # switch. Interfaces are named with the convention "{src}-{dst}". Intfs at the
 # vswitch are assigned IP addresses with the convention "192.168.0.1{host#}",
 # and those at the hosts are done as "192.168.0.{host#}".
