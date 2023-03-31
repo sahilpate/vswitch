@@ -10,6 +10,11 @@
 #ifndef DUPLICATE_MANAGER_HPP
 #define DUPLICATE_MANAGER_HPP
 
+#include <map>
+#include <mutex>
+#include <vector>
+#include <RawPacket.h>
+
 class DuplicateManager {
 public:
     DuplicateManager(int total_intfs);
