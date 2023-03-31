@@ -1,13 +1,16 @@
-// PcapPlusPlus
+/*
+ * main.cpp - The project's entry point.
+ *
+ * It opens the appropriate interfaces for capturing, creates all threads necessary for the switch
+ * to function, and closes the interfaces when it receives an exit command from the CLI.
+ */
+
 #include <PcapLiveDeviceList.h>
 #include <SystemUtils.h>
-
-// Flex
 #include <FlexLexer.h>
-
-// vswitch
 #include "cli.hpp"
 #include "vswitch_shmem.hpp"
+#include "vswitch_utils.hpp"
 
 /*
  * receive_packet() - Passed to pcpp::PcapLiveDevice.startCapture(), which is called for every
@@ -93,7 +96,7 @@ void cli(VswitchShmem *data) {
     CliInterpreter::token token;
 
     while(true) {
-	std::cout << "vswitch# ";
+	std::cout << "vswitch# " << std::flush;
 	std::vector<CliInterpreter::token> tokens;
 	std::vector<std::string> args;
 	while((token = static_cast<CliInterpreter::token>(lexer->yylex())) != interpreter.NL) {
@@ -121,20 +124,7 @@ void cli(VswitchShmem *data) {
  * prefixed by "vswitch") and the single sending thread.
  */
 int main(void) {
-    std::vector<pcpp::PcapLiveDevice *> veth_intfs, all_intfs =
-	pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDevicesList();
-
-    for(auto intf : all_intfs) {
-	std::string intf_name = intf->getName();
-	std::string prefix = "vswitch";
-	if(intf_name.compare(0, prefix.size(), prefix) == 0) {
-	    if(!intf->open()) {
-		std::cerr << "Could not open intf " << intf_name << std::endl;
-	    }
-	    veth_intfs.push_back(intf);
-	}
-    }
-
+    std::vector<pcpp::PcapLiveDevice *> veth_intfs = get_intfs_prefixed_by("vswitch");
     VswitchShmem data(veth_intfs);
 
     std::cout << "Starting capture on:" << std::endl;
