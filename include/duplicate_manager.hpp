@@ -12,6 +12,7 @@
 
 #include <map>
 #include <mutex>
+#include <string>
 #include <vector>
 #include <RawPacket.h>
 
@@ -20,6 +21,8 @@ public:
     DuplicateManager(int total_intfs);
     void mark_duplicate(int intf_indx, pcpp::RawPacket pckt);
     bool check_duplicate(int intf_indx, pcpp::RawPacket pckt);
+    std::string to_string(std::string prefix = "");
+    int num_packets_for_intf(long unsigned int intf_indx);
 
 private:
     /*
