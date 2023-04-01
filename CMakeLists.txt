@@ -32,6 +32,14 @@ add_executable("${PROJECT_NAME}"
 
 target_include_directories("${PROJECT_NAME}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries("${PROJECT_NAME}" PUBLIC PcapPlusPlus::Pcap++)
-
-# We want to have the binary compiled in the same folder as the code
 set_target_properties("${PROJECT_NAME}" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_executable("vswitch_testing"
+  tests/tests.cpp
+  src/duplicate_manager.cpp
+  src/testing_utils.cpp
+  src/vswitch_utils.cpp)
+
+target_include_directories("vswitch_testing" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries("vswitch_testing" PUBLIC PcapPlusPlus::Pcap++)
+set_target_properties("vswitch_testing" PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

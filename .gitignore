@@ -1,5 +1,7 @@
 *~
-testing/
+misc/
 vswitch
 build/
 lex.yy.cc
+test_orchestrator
+vswitch_testing
