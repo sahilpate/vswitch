@@ -55,6 +55,7 @@ private:
 
     // CLI functions
     const static CliFunc show_mac_addrtbl;
+    const static CliFunc show_interfaces;
 
     // Valid CLI commands
     const static std::vector<std::pair<TokenVec, CliFunc>> commands;

@@ -106,7 +106,7 @@ void cli(VswitchShmem *data) {
     FlexLexer *lexer = new yyFlexLexer;
     CliInterpreter::token token;
 
-    std::cout << vswitch_header << std::endl;
+    std::cout << std::endl << vswitch_header << std::endl;
     while(true) {
 	std::cout << "vswitch# " << std::flush;
 	std::vector<CliInterpreter::token> tokens;
@@ -139,12 +139,9 @@ int main(void) {
     std::vector<pcpp::PcapLiveDevice *> veth_intfs = get_intfs_prefixed_by("vswitch");
     VswitchShmem data(veth_intfs);
 
-    std::cout << "Starting capture on:" << std::endl;
     for(auto intf : veth_intfs) {
 	intf->startCapture(receive_packet, &data);
-	std::cout << intf->getName() << std::endl;
     }
-    std::cout << std::endl;
 
     std::thread process(process_packets, &data);
     std::thread egress(send_packets, &data);
@@ -155,10 +152,6 @@ int main(void) {
 
     for(auto intf : veth_intfs) {
 	intf->stopCapture();
-    }
-
-    for(auto intf : veth_intfs) {
-	std::cout << "Closing " << intf->getName() << std::endl;
 	intf->close();
     }
 

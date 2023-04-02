@@ -23,7 +23,7 @@ exit		{return EXIT;}
 show	   	{return SHOW;}
 mac		{return MAC;}
 address-table	{return ADDR_TBL;}
-interface	{return INTF;}
+interfaces	{return INTF;}
 counters	{return COUNT;}
 {name}		{return NAME;}
 {uint}		{return UINT;}

@@ -4,6 +4,9 @@
  */
 
 #include <iostream>
+#include <err.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "cli.hpp"
 
 // Aliases to replace some of the unpleasant types used frequently here.
@@ -13,12 +16,34 @@ using CliFunc = std::function<void(std::vector<std::string>)>;
 
 VswitchShmem *CliInterpreter::shmem = nullptr;
 
+// CLI functions
 const CliFunc CliInterpreter::show_mac_addrtbl = [](StrVec) {
     shmem->mac_tbl.print_mactbl(std::cout);
 };
 
+const CliFunc CliInterpreter::show_interfaces = [](StrVec) {
+    for(auto intf : shmem->veth_intfs) {
+	pid_t cur_ip_call;
+	const char *ip_args[] = {"ip", "-c", "address", "show", intf->getName().c_str(), NULL};
+	switch(cur_ip_call = fork()) {
+	case -1:
+	    warn("fork() failed. Cannot show interface data.");
+	    return;
+	case 0:
+	    if(execvp(ip_args[0], const_cast<char* const*>(ip_args)) == -1) {
+		warn("execvp() failed. Cannot show interface data.");
+	    }
+	    return;
+	}
+	waitpid(cur_ip_call, NULL, 0);
+    }
+    std::cout << std::endl;
+};
+
+// CLI token to function mapping
 const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
-    {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl}
+    {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl},
+    {{SHOW, INTF}, show_interfaces}
 };
 
 CliInterpreter::CliInterpreter(VswitchShmem *shmem) : root(ROOT) {
