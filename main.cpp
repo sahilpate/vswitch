@@ -12,6 +12,17 @@
 #include "vswitch_shmem.hpp"
 #include "vswitch_utils.hpp"
 
+// Logo produced using: https://patorjk.com/software/taag/#p=display&f=Big%20Money-ne&t=vswitch
+const std::string vswitch_header =
+    "                                   /$$   /$$               /$$      \n"
+    "                                  |__/  | $$              | $$      \n"
+    " /$$    /$$ /$$$$$$$ /$$  /$$  /$$ /$$ /$$$$$$    /$$$$$$$| $$$$$$$ \n"
+    "|  $$  /$$//$$_____/| $$ | $$ | $$| $$|_  $$_/   /$$_____/| $$__  $$\n"
+    " \\  $$/$$/|  $$$$$$ | $$ | $$ | $$| $$  | $$    | $$      | $$  \\ $$\n"
+    "  \\  $$$/  \\____  $$| $$ | $$ | $$| $$  | $$ /$$| $$      | $$  | $$\n"
+    "   \\  $/   /$$$$$$$/|  $$$$$/$$$$/| $$  |  $$$$/|  $$$$$$$| $$  | $$\n"
+    "    \\_/   |_______/  \\_____/\\___/ |__/   \\___/   \\_______/|__/  |__/\n";
+
 /*
  * receive_packet() - Passed to pcpp::PcapLiveDevice.startCapture(), which is called for every
  * vswitch interface. startCapture() creates a new thread which listens for traffic on the
@@ -95,6 +106,7 @@ void cli(VswitchShmem *data) {
     FlexLexer *lexer = new yyFlexLexer;
     CliInterpreter::token token;
 
+    std::cout << vswitch_header << std::endl;
     while(true) {
 	std::cout << "vswitch# " << std::flush;
 	std::vector<CliInterpreter::token> tokens;
