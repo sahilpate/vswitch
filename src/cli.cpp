@@ -6,15 +6,18 @@
 #include <iostream>
 #include "cli.hpp"
 
+// Aliases to replace some of the unpleasant types used frequently here.
+using StrVec = std::vector<std::string>;
+using TokenVec = std::vector<CliInterpreter::token>;
+using CliFunc = std::function<void(std::vector<std::string>)>;
+
 VswitchShmem *CliInterpreter::shmem = nullptr;
 
-const std::function<void(std::vector<std::string>)>
-CliInterpreter::show_mac_addrtbl = [](std::vector<std::string>) {
+const CliFunc CliInterpreter::show_mac_addrtbl = [](StrVec) {
     shmem->mac_tbl.print_mactbl(std::cout);
 };
 
-const std::vector<std::pair<std::vector<CliInterpreter::token>,std::function<void(std::vector<std::string>)>>>
-CliInterpreter::commands = {
+const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl}
 };
 
@@ -30,7 +33,7 @@ CliInterpreter::CliInterpreter(VswitchShmem *shmem) : root(ROOT) {
     return;
 }
 
-int CliInterpreter::interpret(std::vector<token> tokens, std::vector<std::string> args) {
+int CliInterpreter::interpret(TokenVec tokens, StrVec args) {
     long unsigned int i, j;
     auto cur_node = &root;
     for(i = 0; i < tokens.size(); i++) {
@@ -57,9 +60,9 @@ int CliInterpreter::interpret(std::vector<token> tokens, std::vector<std::string
 }
 
 void CliInterpreter::add_cmd(InterpreterTreeNode &node,
-			     std::vector<token>::iterator cur,
-			     std::vector<token>::iterator end,
-			     std::function<void(std::vector<std::string>)> func) {
+			     TokenVec::iterator cur,
+			     TokenVec::iterator end,
+			     CliFunc func) {
     if(cur == end) {
 	node.func = func;
 	return;
@@ -82,6 +85,5 @@ void CliInterpreter::add_cmd(InterpreterTreeNode &node,
 
 CliInterpreter::InterpreterTreeNode::InterpreterTreeNode(token tkn) : tkn(tkn) {}
 
-CliInterpreter::InterpreterTreeNode::InterpreterTreeNode(
-    token tkn, std::function<void(std::vector<std::string>)> func)
+CliInterpreter::InterpreterTreeNode::InterpreterTreeNode(token tkn, CliFunc func)
     : tkn(tkn), func(func) {}

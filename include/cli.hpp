@@ -25,6 +25,11 @@ public:
     int interpret(std::vector<token> tokens, std::vector<std::string> args);
 
 private:
+    // Aliases to replace some of the unpleasant types used frequently here.
+    using StrVec = std::vector<std::string>;
+    using TokenVec = std::vector<CliInterpreter::token>;
+    using CliFunc = std::function<void(std::vector<std::string>)>;
+
     /*
      * InterpreterTreeNode - A single node in the interpreter tree. Each node contains a
      * corresponding token, a function that should be executed if this is the final node in the
@@ -33,10 +38,10 @@ private:
     class InterpreterTreeNode {
     public:
 	InterpreterTreeNode(token tkn);
-	InterpreterTreeNode(token tkn, std::function<void(std::vector<std::string>)> func);
+	InterpreterTreeNode(token tkn, CliFunc func);
 
 	token tkn;
-	std::function<void(std::vector<std::string>)> func;
+	CliFunc func;
 	std::vector<InterpreterTreeNode> children;
     };
 
@@ -44,15 +49,15 @@ private:
     static VswitchShmem *shmem;
 
     void add_cmd(InterpreterTreeNode &node,
-		 std::vector<token>::iterator cur,
-		 std::vector<token>::iterator end,
-		 std::function<void(std::vector<std::string>)> func);
+		 TokenVec::iterator cur,
+		 TokenVec::iterator end,
+		 CliFunc func);
 
     // CLI functions
-    const static std::function<void(std::vector<std::string>)> show_mac_addrtbl;
+    const static CliFunc show_mac_addrtbl;
 
     // Valid CLI commands
-    const static std::vector<std::pair<std::vector<token>,std::function<void(std::vector<std::string>)>>> commands;
+    const static std::vector<std::pair<TokenVec, CliFunc>> commands;
 };
 
 #endif // CLI_HPP
