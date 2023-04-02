@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     for(auto [pckt, intf_ptr] : data.pckts_to_transmit) {
 	intf_ptr->sendPacket(pckt);
     }
-    pcpp::multiPlatformSleep(1);
+    pcpp::multiPlatformSleep(2);
 
     for(auto intf : veth_intfs) {
 	intf->stopCapture();

@@ -7,6 +7,7 @@
 #include <EthLayer.h>
 #include <IPv4Layer.h>
 #include <SystemUtils.h>
+#include "duplicate_manager.hpp"
 #include "testing_utils.hpp"
 
 TestData::TestData(std::vector<pcpp::PcapLiveDevice *> veth_intfs)
