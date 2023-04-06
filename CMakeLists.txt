@@ -27,6 +27,7 @@ add_executable("${PROJECT_NAME}"
   src/duplicate_manager.cpp
   src/mac_addr_table.cpp
   src/packet_queue.cpp
+  src/vlans.cpp
   src/vswitch_utils.cpp
   "${LEXER_OUT}")
 

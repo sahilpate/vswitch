@@ -7,6 +7,9 @@
 #include <RawPacket.h>
 #include "mac_addr_table.hpp"
 #include "packet_queue.hpp"
+#include "vlans.hpp"
+
+#include <iostream>
 
 PQueueEntry::PQueueEntry() {}
 PQueueEntry::PQueueEntry(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_intf)
@@ -38,6 +41,7 @@ bool PacketQueue::push_packet(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_in
 }
 
 void PacketQueue::process_packet(MacAddrTable *mac_tbl,
+				 Vlans *vlans,
 				 std::vector<pcpp::PcapLiveDevice *> *veth_intfs) {
     std::unique_lock<std::mutex> local_mtx(proc_mtx);
     while(to_proc == 0) {
@@ -54,16 +58,41 @@ void PacketQueue::process_packet(MacAddrTable *mac_tbl,
     std::vector<pcpp::PcapLiveDevice *> out_intfs;
     pcpp::PcapLiveDevice *mapping = mac_tbl->get_mapping(eth_layer->getDestMac());
 
+    // Get vector index of the current interface
+
+    // TODO: Change MAC address table to use interface indices rather than PcapLiveDevices for addr
+    // to intf mappings. Since the interface vector is constant through the runtime of the switch,
+    // it should be safe to use their integer index to identify them.
+    long unsigned int cur_intf;
+    for(cur_intf = 0; cur_intf < veth_intfs->size(); cur_intf++) {
+	if((*veth_intfs)[cur_intf] == entry.src_intf) {
+	    break;
+	}
+    }
+
+    int in_intf_vlan = vlans->get_vlan_for_intf(cur_intf);
     if(mapping == nullptr) {
-	// Broadcast if no mapping exists
-	for(auto it : *veth_intfs) {
-	    if(it != entry.src_intf) {
-		out_intfs.push_back(it);
+	// Broadcast to intfs in VLAN if no mapping exists
+	for(long unsigned int i = 0; i < veth_intfs->size(); i++) {
+	    if(i == cur_intf || vlans->get_vlan_for_intf(i) != in_intf_vlan) {
+		continue;
 	    }
+
+	    out_intfs.push_back((*veth_intfs)[i]);
 	}
     } else if(mapping != entry.src_intf) {
-	// Otherwise, if the packet is destined for a different intf from the src, forward to it
-	out_intfs.push_back(mapping);
+	// Otherwise, if the packet is destined for a different intf from the src and exists on the
+	// same VLAN, forward to it
+	long unsigned int dst_intf;
+	for(dst_intf = 0; dst_intf < veth_intfs->size(); dst_intf++) {
+	    if((*veth_intfs)[dst_intf] == mapping) {
+		break;
+	    }
+	}
+
+	if(vlans->get_vlan_for_intf(dst_intf) == in_intf_vlan) {
+	    out_intfs.push_back(mapping);
+	}
     }
 
     entry.dst_intfs = out_intfs;

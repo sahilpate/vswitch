@@ -55,7 +55,7 @@ static void receive_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
  */
 void process_packets(VswitchShmem *data) {
     while(true) {
-	data->packet_queue.process_packet(&(data->mac_tbl), &(data->veth_intfs));
+	data->packet_queue.process_packet(&(data->mac_tbl), &(data->vlans), &(data->veth_intfs));
     }
 }
 

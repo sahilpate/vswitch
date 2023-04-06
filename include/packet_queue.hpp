@@ -14,6 +14,7 @@
 #define PACKET_QUEUE_HPP
 
 #include <condition_variable>
+#include "vlans.hpp"
 
 class PQueueEntry {
 public:
@@ -29,6 +30,7 @@ class PacketQueue {
 public:
     bool push_packet(pcpp::RawPacket pckt, pcpp::PcapLiveDevice *src_intf);
     void process_packet(MacAddrTable *mac_tbl,
+			Vlans *vlans,
 			std::vector<pcpp::PcapLiveDevice *> *veth_intfs);
     PQueueEntry pop_packet();
 

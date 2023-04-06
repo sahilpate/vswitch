@@ -11,13 +11,15 @@
 #include "mac_addr_table.hpp"
 #include "packet_queue.hpp"
 #include "duplicate_manager.hpp"
+#include "vlans.hpp"
 
 class VswitchShmem {
 public:
     VswitchShmem(std::vector<pcpp::PcapLiveDevice *> veth_intfs)
 	: veth_intfs(veth_intfs),
 	  ingress_count(veth_intfs.size(), 0),
-	  dup_mgr(veth_intfs.size())
+	  dup_mgr(veth_intfs.size()),
+	  vlans(veth_intfs.size())
 	{}
 
     std::vector<pcpp::PcapLiveDevice *> veth_intfs;
@@ -25,6 +27,7 @@ public:
     PacketQueue packet_queue;
     DuplicateManager dup_mgr;
     MacAddrTable mac_tbl;
+    Vlans vlans;
 };
 
 #endif // VSWITCH_SHMEM_HPP
