@@ -40,10 +40,56 @@ const CliFunc CliInterpreter::show_interfaces = [](StrVec) {
     std::cout << std::endl;
 };
 
+const CliFunc CliInterpreter::show_vlan = [](StrVec) {
+    shmem->vlans.print_vlans(std::cout, shmem->veth_intfs);
+};
+
+const CliFunc CliInterpreter::vlan_add = [](StrVec args) {
+    if(shmem->vlans.add_vlan(stoi(args[0])) == false) {
+	std::cout << "Failed to add VLAN " << args[0] << ". VLANS must be greater than 0 and "
+	    "smaller than 4095." << std::endl;
+    }
+
+    return;
+};
+
+const CliFunc CliInterpreter::vlan_remove = [](StrVec args) {
+    if(shmem->vlans.remove_vlan(stoi(args[0])) == false) {
+	std::cout << "Cannot remove VLAN " << args[0] << "." << std::endl;
+    }
+
+    return;
+};
+
+const CliFunc CliInterpreter::add_intf_to_vlan = [](StrVec args) {
+    bool found_intf = false;
+    long unsigned intf;
+    for(intf = 0; intf < shmem->veth_intfs.size(); intf++) {
+	if(shmem->veth_intfs[intf]->getName() == args[0]) {
+	    found_intf = true;
+	    break;
+	}
+    }
+
+    if(!found_intf) {
+	std::cout << "The interface " << args[0] << " does not exist." << std::endl;
+    }
+
+    if(shmem->vlans.add_intf_to_vlan(intf, stoi(args[1])) == false) {
+	std::cout << "Cannot add interface " << args[0] << " to " << args[1] << "." << std::endl;
+    }
+
+    return;
+};
+
 // CLI token to function mapping
 const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl},
-    {{SHOW, INTF}, show_interfaces}
+    {{SHOW, INTF}, show_interfaces},
+    {{SHOW, VLAN}, show_vlan},
+    {{VLAN, UINT}, vlan_add},
+    {{NO, VLAN, UINT}, vlan_remove},
+    {{NAME, VLAN, UINT}, add_intf_to_vlan}
 };
 
 CliInterpreter::CliInterpreter(VswitchShmem *shmem) : root(ROOT) {

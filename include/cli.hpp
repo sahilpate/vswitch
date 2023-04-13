@@ -18,7 +18,7 @@
 class CliInterpreter {
 public:
     enum token {
-	ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT
+	ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO
     };
 
     CliInterpreter(VswitchShmem *shmem);
@@ -56,6 +56,11 @@ private:
     // CLI functions
     const static CliFunc show_mac_addrtbl;
     const static CliFunc show_interfaces;
+    const static CliFunc show_vlan;
+    const static CliFunc vlan_add;
+    const static CliFunc vlan_remove;
+    const static CliFunc add_intf_to_vlan;
+    const static CliFunc remove_intf_from_vlan;
 
     // Valid CLI commands
     const static std::vector<std::pair<TokenVec, CliFunc>> commands;

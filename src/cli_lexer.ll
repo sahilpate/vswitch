@@ -6,7 +6,7 @@
 
 %{
 enum token {
-     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT
+     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO
 };
 %}
 
@@ -14,7 +14,7 @@ ws	[ \t]+
 alpha	[A-Za-z]
 digit	[0-9]
 uint	[0-9]+
-name	({alpha})({alpha}|{digit})*
+name	({alpha})({alpha}|{digit}|-)*
 
 %%
 {ws}	        /* ignore whitespace */
@@ -25,6 +25,8 @@ mac		{return MAC;}
 address-table	{return ADDR_TBL;}
 interfaces	{return INTF;}
 counters	{return COUNT;}
+vlan		{return VLAN;}
+no		{return NO;}
 {name}		{return NAME;}
 {uint}		{return UINT;}
 .		/* ignore anything else */

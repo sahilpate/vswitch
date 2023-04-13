@@ -15,6 +15,7 @@
 #ifndef VLANS_HPP
 #define VLANS_HPP
 
+#include <iostream>
 #include <mutex>
 #include <set>
 #include <vector>
@@ -26,6 +27,7 @@ public:
     bool add_vlan(int vlan);
     bool remove_vlan(int vlan);
     bool add_intf_to_vlan(int intf, int vlan);
+    void print_vlans(std::ostream &out, const std::vector<pcpp::PcapLiveDevice *> &veth_intfs);
 
 private:
     const int DEFAULT_VLAN = 1;
