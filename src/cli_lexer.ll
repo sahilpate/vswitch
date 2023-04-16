@@ -6,7 +6,7 @@
 
 %{
 enum token {
-     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO
+     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO, CLEAR
 };
 %}
 
@@ -27,6 +27,7 @@ interfaces	{return INTF;}
 counters	{return COUNT;}
 vlan		{return VLAN;}
 no		{return NO;}
+clear		{return CLEAR;}
 {name}		{return NAME;}
 {uint}		{return UINT;}
 .		/* ignore anything else */

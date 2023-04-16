@@ -31,7 +31,6 @@ const std::string vswitch_header =
  */
 static void receive_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie) {
     VswitchShmem *data = static_cast<VswitchShmem *>(cookie);
-    pcpp::Packet parsedPacket(packet);
 
     for(long unsigned int i = 0; i < data->veth_intfs.size(); i++) {
 	if(dev == data->veth_intfs[i]) {
@@ -39,7 +38,7 @@ static void receive_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, v
 		return;
 	    }
 
-	    data->ingress_count[i]++;
+	    data->counters.increment_counters(i, packet->getRawDataLen(), Counters::ING);
 	    data->packet_queue.push_packet(*packet, dev);
 	    break;
 	}
@@ -81,6 +80,7 @@ void send_packets(VswitchShmem *data) {
 
 	    data->dup_mgr.mark_duplicate(j, entry.pckt);
 	    intf_ptr->sendPacket(entry.pckt);
+	    data->counters.increment_counters(j, entry.pckt.getRawDataLen(), Counters::EGR);
 	}
     }
 }

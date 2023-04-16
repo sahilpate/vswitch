@@ -24,6 +24,7 @@ flex_target(LEXER "${CMAKE_CURRENT_SOURCE_DIR}/src/cli_lexer.ll" "${LEXER_OUT}" 
 add_executable("${PROJECT_NAME}"
   main.cpp
   src/cli.cpp
+  src/counters.cpp
   src/duplicate_manager.cpp
   src/mac_addr_table.cpp
   src/packet_queue.cpp

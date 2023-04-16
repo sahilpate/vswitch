@@ -82,6 +82,14 @@ const CliFunc CliInterpreter::add_intf_to_vlan = [](StrVec args) {
     return;
 };
 
+const CliFunc CliInterpreter::show_intf_counters = [](StrVec) {
+    shmem->counters.print_counters(std::cout, shmem->veth_intfs);
+};
+
+const CliFunc CliInterpreter::clear_counters = [](StrVec) {
+    shmem->counters.create_snapshot();
+};
+
 // CLI token to function mapping
 const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl},
@@ -89,7 +97,9 @@ const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{SHOW, VLAN}, show_vlan},
     {{VLAN, UINT}, vlan_add},
     {{NO, VLAN, UINT}, vlan_remove},
-    {{NAME, VLAN, UINT}, add_intf_to_vlan}
+    {{NAME, VLAN, UINT}, add_intf_to_vlan},
+    {{SHOW, INTF, COUNT}, show_intf_counters},
+    {{CLEAR, COUNT}, clear_counters}
 };
 
 CliInterpreter::CliInterpreter(VswitchShmem *shmem) : root(ROOT) {
