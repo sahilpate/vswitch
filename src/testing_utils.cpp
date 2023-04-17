@@ -10,9 +10,19 @@
 #include "duplicate_manager.hpp"
 #include "testing_utils.hpp"
 
+TestWave::TestWave(long unsigned num_intfs)
+    : expected(num_intfs),
+      delay(2)
+{}
+
+TestWave::TestWave(long unsigned num_intfs, unsigned delay)
+    : expected(num_intfs),
+      delay(delay)
+{}
+
 TestData::TestData(std::vector<pcpp::PcapLiveDevice *> veth_intfs)
-    : dup_mgr(veth_intfs.size()),
-      expected(veth_intfs.size()),
+    : cur_wave(0),
+      dup_mgr(veth_intfs.size()),
       veth_intfs(veth_intfs),
       test_status(IN_PROGRESS)
 {}
@@ -35,6 +45,7 @@ pcpp::RawPacket create_broadcast_pckt(pcpp::PcapLiveDevice *src_intf) {
 
 void verify_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie) {
     TestData *data = static_cast<TestData *>(cookie);
+    TestWave *wave = &(data->test_waves[data->cur_wave]);
     pcpp::Packet parsed_packet(packet);
 
     for(long unsigned int i = 0; i < data->veth_intfs.size(); i++) {
@@ -46,7 +57,7 @@ void verify_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *coo
 	    return;
 	}
 
-	if(data->expected.check_duplicate(i, *packet)) {
+	if(wave->expected.check_duplicate(i, *packet)) {
 	    return;
 	} else {
 	    data->err_out.lock();
@@ -69,10 +80,10 @@ void verify_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *coo
     return;
 }
 
-TestData::status evaluate_test_results(TestData &data) {
+TestData::status evaluate_wave_results(TestData &data, TestWave &cur_wave) {
     bool all_not_seen = false;
     for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
-	if(data.expected.num_packets_for_intf(i) > 0) {
+	if(cur_wave.expected.num_packets_for_intf(i) > 0) {
 	    data.test_status = TestData::FAIL;
 	    all_not_seen = true;
 	    std::cerr
@@ -84,11 +95,8 @@ TestData::status evaluate_test_results(TestData &data) {
 
     if(all_not_seen) {
 	std::cerr << "\tThe following packets were expected to arrive, but did not:" << std::endl;
-	std::cerr << data.expected.to_string("\t");
+	std::cerr << cur_wave.expected.to_string("\t");
     }
 
-    if(data.test_status == TestData::IN_PROGRESS) {
-	return TestData::PASS;
-    }
-    return TestData::FAIL;
+    return data.test_status;
 }

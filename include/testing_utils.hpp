@@ -16,11 +16,22 @@
 #include <RawPacket.h>
 #include "duplicate_manager.hpp"
 
+class TestWave {
+public:
+    TestWave(long unsigned num_intfs);
+    TestWave(long unsigned num_intfs, unsigned delay);
+
+    DuplicateManager expected;
+    std::vector<std::pair<pcpp::RawPacket, pcpp::PcapLiveDevice *>> pckts_to_transmit;
+    unsigned delay;
+};
+
 /*
  * TestData - This is shared between the all running threads of the testing container program. It
  * is to be populated with various information about the current running test, most notably: the
  * the packets to be transmitted out each interface, and the packets which are expected to arrive
  * on each interface.
+
  */
 class TestData {
 public:
@@ -28,8 +39,9 @@ public:
 
     TestData(std::vector<pcpp::PcapLiveDevice *> veth_intfs);
 
-    std::vector<std::pair<pcpp::RawPacket, pcpp::PcapLiveDevice *>> pckts_to_transmit;
-    DuplicateManager dup_mgr, expected;
+    std::vector<TestWave> test_waves;
+    long unsigned cur_wave;
+    DuplicateManager dup_mgr;
     std::vector<pcpp::PcapLiveDevice *> veth_intfs;
     status test_status;
     std::mutex err_out;
@@ -51,10 +63,10 @@ pcpp::RawPacket create_broadcast_pckt(pcpp::PcapLiveDevice *src_intf);
 void verify_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie);
 
 /*
- * evaluate_test_results() - After all test packets have been transmitted and the virtual switch
+ * evaluate_wave_results() - After all test packets have been transmitted and the virtual switch
  * has bridged them back to the testing container, this verifies that all the packets we expected
- * to see were observed, and returns the final test result after doing this.
+ * to see were observed, and returns the wave's test result after doing this.
  */
-TestData::status evaluate_test_results(TestData &data);
+TestData::status evaluate_wave_results(TestData &data, TestWave &cur_wave);
 
 #endif // TESTING_UTILS_HPP

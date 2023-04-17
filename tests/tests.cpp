@@ -23,21 +23,23 @@
  * Configuration: default
  */
 void broadcast_test_setup(TestData &data) {
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave = data.test_waves[0];
     for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
         pcpp::RawPacket pckt = create_broadcast_pckt(data.veth_intfs[i]);
 
-	data.pckts_to_transmit.push_back({pckt, data.veth_intfs[i]});
+	wave.pckts_to_transmit.push_back({pckt, data.veth_intfs[i]});
 	data.dup_mgr.mark_duplicate(i, pckt);
 	for(long unsigned int j = 0; j < data.veth_intfs.size(); j++) {
 	    if(i == j) {
 		continue;
 	    }
-	    data.expected.mark_duplicate(j, pckt);
+	    wave.expected.mark_duplicate(j, pckt);
 	}
     }
 
     auto rng = std::default_random_engine {};
-    std::shuffle(std::begin(data.pckts_to_transmit), std::end(data.pckts_to_transmit), rng);
+    std::shuffle(std::begin(wave.pckts_to_transmit), std::end(wave.pckts_to_transmit), rng);
     return;
 }
 
@@ -70,15 +72,26 @@ int main(int argc, char *argv[]) {
 	intf->startCapture(verify_packet, &data);
     }
 
-    for(auto [pckt, intf_ptr] : data.pckts_to_transmit) {
-	intf_ptr->sendPacket(pckt);
+    for(auto &wave : data.test_waves) {
+	for(auto [pckt, intf_ptr] : wave.pckts_to_transmit) {
+	    intf_ptr->sendPacket(pckt);
+	}
+
+	pcpp::multiPlatformSleep(wave.delay);
+
+	auto rslt = evaluate_wave_results(data, wave);
+	if(rslt == TestData::FAIL) {
+	    std::cerr << "FAIL: At wave " << (data.cur_wave + 1) << std::endl;
+	    return rslt;
+	}
+
+	data.cur_wave++;
     }
-    pcpp::multiPlatformSleep(2);
 
     for(auto intf : veth_intfs) {
 	intf->stopCapture();
 	intf->close();
     }
 
-    return evaluate_test_results(data);
+    return TestData::PASS;
 }

@@ -29,7 +29,7 @@
 
 std::vector<int> failed_tsts;
 const std::vector<std::pair<std::string, std::string>> tests_and_args = {
-	{"broadcast_test", ""}
+    {"broadcast_test", ""}
 };
 
 class Proc {
