@@ -43,6 +43,20 @@ pcpp::RawPacket create_broadcast_pckt(pcpp::PcapLiveDevice *src_intf) {
     return *pckt.getRawPacket();
 }
 
+pcpp::RawPacket create_pckt(pcpp::PcapLiveDevice *src_intf, pcpp::PcapLiveDevice *dst_intf) {
+    pcpp::EthLayer eth_layer(src_intf->getMacAddress(), dst_intf->getMacAddress());
+    pcpp::IPv4Layer ip_layer(src_intf->getIPv4Address(), dst_intf->getIPv4Address());
+
+    ip_layer.getIPv4Header()->ipId = pcpp::hostToNet16(2000);
+    ip_layer.getIPv4Header()->timeToLive = 64;
+
+    pcpp::Packet pckt(eth_layer.getHeaderLen() + ip_layer.getHeaderLen());
+    pckt.addLayer(&eth_layer);
+    pckt.addLayer(&ip_layer);
+    pckt.computeCalculateFields();
+    return *pckt.getRawPacket();
+}
+
 void verify_packet(pcpp::RawPacket *packet, pcpp::PcapLiveDevice *dev, void *cookie) {
     TestData *data = static_cast<TestData *>(cookie);
     TestWave *wave = &(data->test_waves[data->cur_wave]);

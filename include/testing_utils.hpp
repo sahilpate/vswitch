@@ -54,6 +54,8 @@ public:
  */
 pcpp::RawPacket create_broadcast_pckt(pcpp::PcapLiveDevice *src_intf);
 
+pcpp::RawPacket create_pckt(pcpp::PcapLiveDevice *src_intf, pcpp::PcapLiveDevice *dst_intf);
+
 /*
  * verify_packet() - Passed to pcpp::PcapLiveDevice.startCapture(). It is called on every incoming
  * packet, and verifies that it is not a duplicate (see DuplicateManager) and that is a packet we

@@ -25,6 +25,7 @@
 void broadcast_test_setup(TestData &data) {
     data.test_waves.push_back(TestWave(data.veth_intfs.size()));
     TestWave &wave = data.test_waves[0];
+
     for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
         pcpp::RawPacket pckt = create_broadcast_pckt(data.veth_intfs[i]);
 
@@ -38,14 +39,55 @@ void broadcast_test_setup(TestData &data) {
 	}
     }
 
-    auto rng = std::default_random_engine {};
+    std::default_random_engine rng(time(0));
     std::shuffle(std::begin(wave.pckts_to_transmit), std::end(wave.pckts_to_transmit), rng);
+    return;
+}
+
+/*
+ * learning_test_setup() - A single packet is broadcasted out a single, random interface. All other
+ * interfaces then reply with a single message destined for the original interface.
+ *
+ * Configuration: default
+ */
+void learning_test_setup(TestData &data) {
+    // Wave 1 - Broadcast out one random intf
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave1 = data.test_waves[0];
+    unsigned orig_intf = rand() % data.veth_intfs.size();
+
+    pcpp::RawPacket orig_pckt = create_broadcast_pckt(data.veth_intfs[orig_intf]);
+    wave1.pckts_to_transmit.push_back({orig_pckt, data.veth_intfs[orig_intf]});
+    data.dup_mgr.mark_duplicate(orig_intf, orig_pckt);
+    for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
+	if(i == orig_intf) {
+	    continue;
+	}
+	wave1.expected.mark_duplicate(i, orig_pckt);
+    }
+
+    // Wave 2 - All other interfaces send a frame to the original interface
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave2 = data.test_waves[1];
+
+    for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
+	if(i == orig_intf) {
+	    continue;
+	}
+
+	pcpp::RawPacket direct_pckt = create_pckt(data.veth_intfs[i], data.veth_intfs[orig_intf]);
+	wave2.pckts_to_transmit.push_back({direct_pckt, data.veth_intfs[i]});
+	data.dup_mgr.mark_duplicate(i, direct_pckt);
+	wave2.expected.mark_duplicate(orig_intf, direct_pckt);
+    }
+
     return;
 }
 
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
-	{"broadcast_test", broadcast_test_setup}
+	{"broadcast_test", broadcast_test_setup},
+	{"learning_test", learning_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
@@ -53,6 +95,8 @@ int main(int argc, char *argv[]) {
 	std::cerr << "Expected exactly 1 argument." << std::endl;
 	return TestData::FAIL;
     }
+
+    srand((unsigned)time(NULL));
 
     std::map<std::string, std::function<void(TestData &)>>::iterator test_it;
     test_it = tests.find(std::string(argv[1]));
