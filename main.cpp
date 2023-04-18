@@ -91,7 +91,7 @@ void send_packets(VswitchShmem *data) {
  */
 void age_mac_addrs(VswitchShmem *data) {
     while(true) {
-	pcpp::multiPlatformSleep(data->mac_tbl.get_max_age());
+	pcpp::multiPlatformSleep(1);
 	data->mac_tbl.age_mappings();
     }
 }

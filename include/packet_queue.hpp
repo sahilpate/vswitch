@@ -42,7 +42,7 @@ private:
     std::condition_variable proc_cond, cons_cond;
     std::mutex prod_mtx, proc_mtx, cons_mtx;
 
-    const static int queue_size = 10;
+    const static int queue_size = 50;
     PQueueEntry packet_queue[queue_size];
 };
 

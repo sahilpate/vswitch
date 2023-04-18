@@ -37,7 +37,7 @@ private:
 	     std::pair<pcpp::PcapLiveDevice *, std::time_t>,
 	     MacAddrCompare> table;
     std::mutex table_access;
-    int max_age = 5; // in seconds
+    int max_age = 15; // in seconds
 };
 
 #endif // MAC_ADDR_TABLE_HPP
