@@ -19,9 +19,9 @@ public:
     void push_mapping(pcpp::MacAddress mac_addr, pcpp::PcapLiveDevice *intf);
     pcpp::PcapLiveDevice *get_mapping(pcpp::MacAddress mac_addr);
     int age_mappings();
+    unsigned get_max_age();
+    bool modify_aging_time(unsigned int new_age);
     void print_mactbl(std::ostream &out);
-
-    static const int max_age = 5; // in seconds
 
 private:
     /*
@@ -37,6 +37,7 @@ private:
 	     std::pair<pcpp::PcapLiveDevice *, std::time_t>,
 	     MacAddrCompare> table;
     std::mutex table_access;
+    int max_age = 5; // in seconds
 };
 
 #endif // MAC_ADDR_TABLE_HPP

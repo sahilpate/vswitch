@@ -6,7 +6,7 @@
 
 %{
 enum token {
-     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO, CLEAR
+     ROOT, NL, EXIT, SHOW, MAC, ADDR_TBL, INTF, COUNT, NAME, UINT, VLAN, NO, CLEAR, AGE_TIME
 };
 %}
 
@@ -28,6 +28,7 @@ counters	{return COUNT;}
 vlan		{return VLAN;}
 no		{return NO;}
 clear		{return CLEAR;}
+aging-time	{return AGE_TIME;}
 {name}		{return NAME;}
 {uint}		{return UINT;}
 .		/* ignore anything else */

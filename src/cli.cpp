@@ -90,6 +90,17 @@ const CliFunc CliInterpreter::clear_counters = [](StrVec) {
     shmem->counters.create_snapshot();
 };
 
+const CliFunc CliInterpreter::mac_addrtbl_agetime = [](StrVec arg) {
+    unsigned new_age = stoi(arg[0]);
+    if(shmem->mac_tbl.modify_aging_time(new_age) == false) {
+	std::cout << "Cannot set global aging time to " << arg[0] << std::endl;
+    }
+};
+
+const CliFunc CliInterpreter::show_mac_addrtbl_agetime = [](StrVec) {
+    std::cout << "Global Aging Time: " << shmem->mac_tbl.get_max_age() << std::endl;
+};
+
 // CLI token to function mapping
 const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{SHOW, MAC, ADDR_TBL}, show_mac_addrtbl},
@@ -99,7 +110,9 @@ const std::vector<std::pair<TokenVec, CliFunc>> CliInterpreter::commands = {
     {{NO, VLAN, UINT}, vlan_remove},
     {{NAME, VLAN, UINT}, add_intf_to_vlan},
     {{SHOW, INTF, COUNT}, show_intf_counters},
-    {{CLEAR, COUNT}, clear_counters}
+    {{CLEAR, COUNT}, clear_counters},
+    {{MAC, ADDR_TBL, AGE_TIME, UINT}, mac_addrtbl_agetime},
+    {{SHOW, MAC, ADDR_TBL, AGE_TIME}, show_mac_addrtbl_agetime}
 };
 
 CliInterpreter::CliInterpreter(VswitchShmem *shmem) : root(ROOT) {

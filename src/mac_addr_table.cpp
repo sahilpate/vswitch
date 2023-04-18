@@ -49,6 +49,24 @@ int MacAddrTable::age_mappings() {
     return num_aged_out;
 }
 
+unsigned MacAddrTable::get_max_age() {
+    unsigned cur_max_age;
+    table_access.lock();
+    cur_max_age = max_age;
+    table_access.unlock();
+    return cur_max_age;
+}
+
+bool MacAddrTable::modify_aging_time(unsigned int new_age) {
+    if(new_age < 1) {
+	return false;
+    }
+    table_access.lock();
+    max_age = new_age;
+    table_access.unlock();
+    return true;
+}
+
 void MacAddrTable::print_mactbl(std::ostream &out) {
     this->age_mappings();
     std::vector<std::string> headers = {"Mac Addresses", "Ports", "Time to Live"};
