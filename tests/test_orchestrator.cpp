@@ -30,7 +30,8 @@
 std::vector<int> failed_tsts;
 const std::vector<std::pair<std::string, std::string>> tests_and_args = {
     {"broadcast_test", ""},
-    {"learning_test", ""}
+    {"learning_test", ""},
+    {"aging_test", "mac address-table aging-time 1\n"}
 };
 
 class Proc {
