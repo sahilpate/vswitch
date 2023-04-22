@@ -42,6 +42,11 @@ const std::vector<std::pair<std::string, std::string>> tests_and_args = {
      "vlan 2\n"
      "vswitch-test1 vlan 2\n"
      "vswitch-test2 vlan 2\n"
+     "vswitch-test3 vlan 2\n"},
+    {"vlan_intf_outside_mac_tbl_test",
+     "vlan 2\n"
+     "vswitch-test1 vlan 2\n"
+     "vswitch-test2 vlan 2\n"
      "vswitch-test3 vlan 2\n"}
 };
 
