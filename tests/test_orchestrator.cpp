@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <SystemUtils.h>
 #include "testing_utils.hpp"
 
 std::vector<int> failed_tsts;
@@ -36,7 +37,12 @@ const std::vector<std::pair<std::string, std::string>> tests_and_args = {
     {"vlan_broadcast_test",
      "vlan 2\n"
      "vswitch-test2 vlan 2\n"
-     "vswitch-test4 vlan 2\n"}
+     "vswitch-test4 vlan 2\n"},
+    {"vlan_mac_tbl_test",
+     "vlan 2\n"
+     "vswitch-test1 vlan 2\n"
+     "vswitch-test2 vlan 2\n"
+     "vswitch-test3 vlan 2\n"}
 };
 
 class Proc {
@@ -146,6 +152,7 @@ int main() {
 
 	vswitch = create_piped_proc(vswitch_args, true, dev_null, dev_null);
 	write(vswitch.write_fd, cli_args.c_str(), strlen(cli_args.c_str()));
+	pcpp::multiPlatformSleep(1);
 
 	// NOTE: Potential for race condition here. The switch may not be finished configuring itself
 	// before the testing process is created and run.

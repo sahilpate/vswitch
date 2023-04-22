@@ -175,7 +175,7 @@ void mult_mac_test_setup(TestData &data) {
  * Configuration: *Expect exactly 5 interfaces*
  *     vlan 2
  *     vswitch-test2 vlan 2
- *     vswitch-test4 vlan 4
+ *     vswitch-test4 vlan 2
  */
 void vlan_broadcast_test_setup(TestData &data) {
     if(data.veth_intfs.size() != 5) {
@@ -205,13 +205,68 @@ void vlan_broadcast_test_setup(TestData &data) {
     return;
 }
 
+/*
+ * vlan_mac_tbl_test_setup() - After the first three interfaces are place on a VLAN, one in the VLAN
+ * is randomly selected to send a broadcast frame, and the a second unique interaface on the same
+ * VLAN sends a reply to the first interface.
+ *
+ * Configuration: *Expect exactly 5 interfaces*
+ *     vlan 2
+ *     vswitch-test1 vlan 2
+ *     vswitch-test2 vlan 2
+ *     vswitch-test3 vlan 2
+ */
+void vlan_mac_tbl_test_setup(TestData &data) {
+    if(data.veth_intfs.size() != 5) {
+	std::cerr << __func__
+		  << ": Expected 5 interfaces, but has "
+		  << data.veth_intfs.size()
+		  << ". Skipping test..."
+		  << std::endl;
+	return;
+    }
+
+    // Wave 1 - Broadcast a frame out a random interface within a VLAN
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave1 = data.test_waves[0];
+    unsigned orig_intf = rand() % 3;
+    pcpp::RawPacket orig_pckt = create_broadcast_pckt(data.veth_intfs[orig_intf]);
+
+    wave1.pckts_to_transmit.push_back({orig_pckt, data.veth_intfs[orig_intf]});
+    data.dup_mgr.mark_duplicate(orig_intf, orig_pckt);
+    for(long unsigned int i = 0; i < 3; i++) {
+	if(i == orig_intf) {
+	    continue;
+	}
+
+	wave1.expected.mark_duplicate(i, orig_pckt);
+    }
+
+    // Wave 2 - Send a packet directly to the broadcasting intf from a different intf within the
+    // same VLAN
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave2 = data.test_waves[1];
+    unsigned snd_intf = orig_intf;
+    while(snd_intf == orig_intf) {
+	snd_intf = rand() % 3;
+    }
+
+    pcpp::RawPacket snd_pckt = create_pckt(data.veth_intfs[snd_intf], data.veth_intfs[orig_intf]);
+    wave2.pckts_to_transmit.push_back({snd_pckt, data.veth_intfs[snd_intf]});
+    data.dup_mgr.mark_duplicate(snd_intf, snd_pckt);
+    wave2.expected.mark_duplicate(orig_intf, snd_pckt);
+
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
 	{"broadcast_test", broadcast_test_setup},
 	{"learning_test", learning_test_setup},
 	{"aging_test", aging_test_setup},
 	{"mult_mac_test", mult_mac_test_setup},
-	{"vlan_broadcast_test", vlan_broadcast_test_setup}
+	{"vlan_broadcast_test", vlan_broadcast_test_setup},
+	{"vlan_mac_tbl_test", vlan_mac_tbl_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
