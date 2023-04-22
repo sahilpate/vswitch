@@ -172,15 +172,16 @@ void mult_mac_test_setup(TestData &data) {
  * interfaces are placed on a separate VLAN. Only expect the broadcasts to reach the interfaces on
  * the same VLAN.
  *
- * Configuration: *Expect exactly 5 interfaces*
+ * Configuration: *Expect exactly 6 interfaces*
  *     vlan 2
  *     vswitch-test2 vlan 2
  *     vswitch-test4 vlan 2
+ *     vswitch-test6 vlan 2
  */
 void vlan_broadcast_test_setup(TestData &data) {
-    if(data.veth_intfs.size() != 5) {
+    if(data.veth_intfs.size() != 6) {
 	std::cerr << __func__
-		  << ": Expected 5 interfaces, but has "
+		  << ": Expected 6 interfaces, but has "
 		  << data.veth_intfs.size()
 		  << ". Skipping test..."
 		  << std::endl;
@@ -210,16 +211,16 @@ void vlan_broadcast_test_setup(TestData &data) {
  * is randomly selected to send a broadcast frame, and the a second unique interface on the same
  * VLAN sends a reply to the first interface.
  *
- * Configuration: *Expect exactly 5 interfaces*
+ * Configuration: *Expect exactly 6 interfaces*
  *     vlan 2
  *     vswitch-test1 vlan 2
  *     vswitch-test2 vlan 2
  *     vswitch-test3 vlan 2
  */
 void vlan_mac_tbl_test_setup(TestData &data) {
-    if(data.veth_intfs.size() != 5) {
+    if(data.veth_intfs.size() != 6) {
 	std::cerr << __func__
-		  << ": Expected 5 interfaces, but has "
+		  << ": Expected 6 interfaces, but has "
 		  << data.veth_intfs.size()
 		  << ". Skipping test..."
 		  << std::endl;
@@ -264,16 +265,16 @@ void vlan_mac_tbl_test_setup(TestData &data) {
  * one in the VLAN is randomly selected to send a broadcast frame, and the a second unique
  * interface on a different VLAN sends a reply to the first interface. This frame should be dropped.
  *
- * Configuration: *Expect exactly 5 interfaces*
+ * Configuration: *Expect exactly 6 interfaces*
  *     vlan 2
  *     vswitch-test1 vlan 2
  *     vswitch-test2 vlan 2
  *     vswitch-test3 vlan 2
  */
 void vlan_intf_outside_mac_tbl_test_setup(TestData &data) {
-    if(data.veth_intfs.size() != 5) {
+    if(data.veth_intfs.size() != 6) {
 	std::cerr << __func__
-		  << ": Expected 5 interfaces, but has "
+		  << ": Expected 6 interfaces, but has "
 		  << data.veth_intfs.size()
 		  << ". Skipping test..."
 		  << std::endl;
@@ -299,11 +300,51 @@ void vlan_intf_outside_mac_tbl_test_setup(TestData &data) {
     // Wave 2 - An intf outside the VLAN attempts and fails to use the MAC table entry
     data.test_waves.push_back(TestWave(data.veth_intfs.size()));
     TestWave &wave2 = data.test_waves[1];
-    unsigned snd_intf = (rand() % 2) + 3;
+    unsigned snd_intf = (rand() % 3) + 3;
 
     pcpp::RawPacket snd_pckt = create_pckt(data.veth_intfs[snd_intf], data.veth_intfs[orig_intf]);
     wave2.pckts_to_transmit.push_back({snd_pckt, data.veth_intfs[snd_intf]});
     data.dup_mgr.mark_duplicate(snd_intf, snd_pckt);
+
+    return;
+}
+
+/*
+ * multiple_vlans_test_setup() - Test that more than two VLANs can operate at the same time.
+ *
+ * Configuration: *Expect exactly 6 interfaces*
+ *     vlan 100
+ *     vlan 200
+ *     vlan 300
+ *     vswitch-test1 vlan 100
+ *     vswitch-test2 vlan 100
+ *     vswitch-test3 vlan 200
+ *     vswitch-test4 vlan 200
+ *     vswitch-test5 vlan 300
+ *     vswitch-test6 vlan 300
+ */
+void multiple_vlans_test_setup(TestData &data) {
+    if(data.veth_intfs.size() != 6) {
+	std::cerr << __func__
+		  << ": Expected 6 interfaces, but has "
+		  << data.veth_intfs.size()
+		  << ". Skipping test..."
+		  << std::endl;
+	return;
+    }
+
+    // Wave - Broadcast out all interfaces, expect reply from intf on same VLAN
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave = data.test_waves[0];
+
+    for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
+	pcpp::RawPacket pckt = create_broadcast_pckt(data.veth_intfs[i]);
+	wave.pckts_to_transmit.push_back({pckt, data.veth_intfs[i]});
+	data.dup_mgr.mark_duplicate(i, pckt);
+
+	unsigned exp_indx = (i % 2) ? (i - 1) : (i + 1);
+	wave.expected.mark_duplicate(exp_indx, pckt);
+    }
 
     return;
 }
@@ -316,7 +357,8 @@ int main(int argc, char *argv[]) {
 	{"mult_mac_test", mult_mac_test_setup},
 	{"vlan_broadcast_test", vlan_broadcast_test_setup},
 	{"vlan_mac_tbl_test", vlan_mac_tbl_test_setup},
-	{"vlan_intf_outside_mac_tbl_test", vlan_intf_outside_mac_tbl_test_setup}
+	{"vlan_intf_outside_mac_tbl_test", vlan_intf_outside_mac_tbl_test_setup},
+	{"multiple_vlans_test", multiple_vlans_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.

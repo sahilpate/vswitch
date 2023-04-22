@@ -37,7 +37,8 @@ const std::vector<std::pair<std::string, std::string>> tests_and_args = {
     {"vlan_broadcast_test",
      "vlan 2\n"
      "vswitch-test2 vlan 2\n"
-     "vswitch-test4 vlan 2\n"},
+     "vswitch-test4 vlan 2\n"
+     "vswitch-test6 vlan 2\n"},
     {"vlan_mac_tbl_test",
      "vlan 2\n"
      "vswitch-test1 vlan 2\n"
@@ -47,7 +48,17 @@ const std::vector<std::pair<std::string, std::string>> tests_and_args = {
      "vlan 2\n"
      "vswitch-test1 vlan 2\n"
      "vswitch-test2 vlan 2\n"
-     "vswitch-test3 vlan 2\n"}
+     "vswitch-test3 vlan 2\n"},
+    {"multiple_vlans_test",
+     "vlan 100\n"
+     "vlan 200\n"
+     "vlan 300\n"
+     "vswitch-test1 vlan 100\n"
+     "vswitch-test2 vlan 100\n"
+     "vswitch-test3 vlan 200\n"
+     "vswitch-test4 vlan 200\n"
+     "vswitch-test5 vlan 300\n"
+     "vswitch-test6 vlan 300\n"}
 };
 
 class Proc {
