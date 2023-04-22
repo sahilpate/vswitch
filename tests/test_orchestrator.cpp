@@ -32,7 +32,11 @@ const std::vector<std::pair<std::string, std::string>> tests_and_args = {
     {"broadcast_test", ""},
     {"learning_test", ""},
     {"aging_test", "mac address-table aging-time 1\n"},
-    {"mult_mac_test", "mac address-table aging-time 128\n"}
+    {"mult_mac_test", "mac address-table aging-time 128\n"},
+    {"vlan_broadcast_test",
+     "vlan 2\n"
+     "vswitch-test2 vlan 2\n"
+     "vswitch-test4 vlan 2\n"}
 };
 
 class Proc {

@@ -167,12 +167,51 @@ void mult_mac_test_setup(TestData &data) {
     return;
 }
 
+/*
+ * vlan_broadcast_test_setup() - Broadcast a packet out every interface, but all odd-indexed
+ * interfaces are placed on a separate VLAN. Only expect the broadcasts to reach the interfaces on
+ * the same VLAN.
+ *
+ * Configuration: *Expect exactly 5 interfaces*
+ *     vlan 2
+ *     vswitch-test2 vlan 2
+ *     vswitch-test4 vlan 4
+ */
+void vlan_broadcast_test_setup(TestData &data) {
+    if(data.veth_intfs.size() != 5) {
+	std::cerr << __func__
+		  << ": Expected 5 interfaces, but has "
+		  << data.veth_intfs.size()
+		  << ". Skipping test..."
+		  << std::endl;
+	return;
+    }
+
+    // Wave 1 - Broadcast out all intfs. Even/odd intfs are on different VLANs.
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave = data.test_waves[0];
+    for(long unsigned int i = 0; i < data.veth_intfs.size(); i++) {
+	pcpp::RawPacket pckt = create_broadcast_pckt(data.veth_intfs[i]);
+	wave.pckts_to_transmit.push_back({pckt, data.veth_intfs[i]});
+	data.dup_mgr.mark_duplicate(i, pckt);
+
+	for(long unsigned int j = 0; j < data.veth_intfs.size(); j++) {
+	    if(i != j && ((i % 2) == (j % 2))) {
+		wave.expected.mark_duplicate(j, pckt);
+	    }
+	}
+    }
+
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
 	{"broadcast_test", broadcast_test_setup},
 	{"learning_test", learning_test_setup},
 	{"aging_test", aging_test_setup},
-	{"mult_mac_test", mult_mac_test_setup}
+	{"mult_mac_test", mult_mac_test_setup},
+	{"vlan_broadcast_test", vlan_broadcast_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
