@@ -131,11 +131,48 @@ void aging_test_setup(TestData &data) {
     return;
 }
 
+/*
+ * mult_mac_test_setup() - Broadcast a packet out the first interface. Then, for each interface i in
+ * range 2-N, send a packet from i directed to all interfaces < i. Because of MAC learning, none of
+ * the packets sent after wave 1 should be broadcasted.
+ *
+ * Configuration: mac address-table aging-time 128
+ */
+void mult_mac_test_setup(TestData &data) {
+    // Wave 1 - Initial broadcast
+    data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+    TestWave &wave1 = data.test_waves[0];
+    pcpp::RawPacket first_pckt = create_broadcast_pckt(data.veth_intfs[0]);
+    wave1.pckts_to_transmit.push_back({first_pckt, data.veth_intfs[0]});
+    data.dup_mgr.mark_duplicate(0, first_pckt);
+
+    for(long unsigned int i = 1; i < data.veth_intfs.size(); i++) {
+	wave1.expected.mark_duplicate(i, first_pckt);
+    }
+
+    // Waves 2-N - Selective transmission
+    for(long unsigned int i = 1; i < data.veth_intfs.size(); i++) {
+	data.test_waves.push_back(TestWave(data.veth_intfs.size()));
+	TestWave &cur_wave = data.test_waves[i];
+
+	for(long unsigned int j = 0; j < i; j++) {
+	    pcpp::RawPacket cur_pckt = create_pckt(data.veth_intfs[i], data.veth_intfs[j]);
+
+	    cur_wave.pckts_to_transmit.push_back({cur_pckt, data.veth_intfs[i]});
+	    data.dup_mgr.mark_duplicate(i, cur_pckt);
+	    cur_wave.expected.mark_duplicate(j, cur_pckt);
+	}
+    }
+
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
 	{"broadcast_test", broadcast_test_setup},
 	{"learning_test", learning_test_setup},
-	{"aging_test", aging_test_setup}
+	{"aging_test", aging_test_setup},
+	{"mult_mac_test", mult_mac_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
