@@ -212,10 +212,10 @@ void vlan_broadcast_test_setup(TestData &data) {
  * VLAN sends a reply to the first interface.
  *
  * Configuration: *Expect exactly 6 interfaces*
- *     vlan 2
- *     vswitch-test1 vlan 2
- *     vswitch-test2 vlan 2
- *     vswitch-test3 vlan 2
+ *     vlan N
+ *     vswitch-test1 vlan N
+ *     vswitch-test2 vlan N
+ *     vswitch-test3 vlan N
  */
 void vlan_mac_tbl_test_setup(TestData &data) {
     if(data.veth_intfs.size() != 6) {
@@ -375,6 +375,19 @@ void vlan_removal_test_setup(TestData &data) {
     return;
 }
 
+/*
+ * vlan_moving_test_setup() - Identical to VLAN MAC table test, but is expected to run with a
+ * particular configuration. Namely...
+ *
+ * Configuration: Anything such that the first three interfaces are moved between multiple VLANs
+ * multiple times, and that by the end, they are the only interfaces which share the VLAN they're
+ * finally on.
+ */
+void vlan_moving_test_setup(TestData &data) {
+    vlan_mac_tbl_test_setup(data);
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
 	{"broadcast_test", broadcast_test_setup},
@@ -385,7 +398,8 @@ int main(int argc, char *argv[]) {
 	{"vlan_mac_tbl_test", vlan_mac_tbl_test_setup},
 	{"vlan_intf_outside_mac_tbl_test", vlan_intf_outside_mac_tbl_test_setup},
 	{"multiple_vlans_test", multiple_vlans_test_setup},
-	{"vlan_removal_test", vlan_removal_test_setup}
+	{"vlan_removal_test", vlan_removal_test_setup},
+	{"mult_vlan_moves_test", vlan_moving_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
