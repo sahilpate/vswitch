@@ -349,6 +349,32 @@ void multiple_vlans_test_setup(TestData &data) {
     return;
 }
 
+/*
+ * vlan_removal_test_setup() - Tests that when a VLAN is removed, the interfaces which were on it
+ * are placed back into the default VLAN, and that they can now communicate with all other
+ * interfaces on the default VLAN. This reuses the mult_mac_test. The "uniqueness" of this test
+ * comes from its pre-configuration.
+ *
+ * Configuration: *Expect exactly 6 interfaces*
+ *     vlan 123
+ *     vswitch-test1 vlan 123
+ *     vswitch-test5 vlan 123
+ *     vswitch-test4 vlan 123
+ *     no vlan 123
+ */
+void vlan_removal_test_setup(TestData &data) {
+    if(data.veth_intfs.size() != 6) {
+	std::cerr << __func__
+		  << ": Expected 6 interfaces, but has "
+		  << data.veth_intfs.size()
+		  << ". Skipping test..."
+		  << std::endl;
+	return;
+    }
+    mult_mac_test_setup(data);
+    return;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, std::function<void(TestData &)>> tests = {
 	{"broadcast_test", broadcast_test_setup},
@@ -358,7 +384,8 @@ int main(int argc, char *argv[]) {
 	{"vlan_broadcast_test", vlan_broadcast_test_setup},
 	{"vlan_mac_tbl_test", vlan_mac_tbl_test_setup},
 	{"vlan_intf_outside_mac_tbl_test", vlan_intf_outside_mac_tbl_test_setup},
-	{"multiple_vlans_test", multiple_vlans_test_setup}
+	{"multiple_vlans_test", multiple_vlans_test_setup},
+	{"vlan_removal_test", vlan_removal_test_setup}
     };
 
     // Validate command line argument. Ensure the given strings corresponds to a valid test.
